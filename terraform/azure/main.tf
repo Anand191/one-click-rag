@@ -64,7 +64,7 @@ resource "azurerm_storage_account" "default" {
 resource "azurerm_storage_account_network_rules" "storage_network_rules" {
   storage_account_id         = azurerm_storage_account.default.id
   default_action             = "Deny"
-  ip_rules                   = [var.local_ip, var.static_ip, var.portal_ip]
+  ip_rules                   = [var.local_ip, var.static_ip_1, var.static_ip_2, var.portal_ip]
   virtual_network_subnet_ids = [azurerm_subnet.data_subnet.id]
   bypass                     = ["AzureServices"]
 }
@@ -98,7 +98,7 @@ resource "azurerm_search_service" "defaultsearch" {
   authentication_failure_mode  = "http403"
 
   public_network_access_enabled = true
-  allowed_ips                   = [var.local_ip, var.static_ip, var.portal_ip]
+  allowed_ips                   = [var.local_ip, var.static_ip_1, var.static_ip_2, var.portal_ip]
   network_rule_bypass_option    = "AzureServices"
   identity {
     type = "SystemAssigned"
@@ -130,7 +130,7 @@ resource "azurerm_cognitive_account" "openai_resource" {
   network_acls {
     bypass         = "AzureServices"
     default_action = "Deny"
-    ip_rules       = [var.local_ip, var.static_ip, var.portal_ip]
+    ip_rules       = [var.local_ip, var.static_ip_1, var.static_ip_2, var.portal_ip]
   }
 }
 

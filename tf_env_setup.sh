@@ -16,5 +16,6 @@ export ARM_SUBSCRIPTION_ID="$SUBSCRIPTION"
 . ./secrets/az_allowed_ip.config
 
 export TF_VAR_local_ip="$LOCAL_IP"
-export TF_VAR_static_ip="$STATIC_IP"
+export TF_VAR_static_ip_1="$STATIC_IP_1"
+export TF_VAR_static_ip_2="$STATIC_IP_2"
 export TF_VAR_portal_ip="$PORTAL_IP"

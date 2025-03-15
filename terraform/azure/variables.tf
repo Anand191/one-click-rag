@@ -102,5 +102,6 @@ variable "tags" {
 }
 
 variable "local_ip" { type = string }
-variable "static_ip" { type = string }
+variable "static_ip_1" { type = string }
+variable "static_ip_2" { type = string }
 variable "portal_ip" { type = string }
