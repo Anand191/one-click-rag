@@ -12,7 +12,7 @@ gcp:
 azure:
   llm:
     model: chatmodel-4o
-    version: 2024-08-01-preview
+    version: 2025-01-01-preview
   embedding:
     model: embedding-large
     dimensions: 1536

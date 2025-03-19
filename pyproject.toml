@@ -85,6 +85,7 @@ google-cloud-aiplatform = "^1.71.0"
 google-cloud-documentai = "^3.1.0"
 ragas = "^0.2.10"
 unstructured = {extras = ["md", "pdf"], version = "^0.16.12"}
+python-docx = "^1.1.2"
 
 
 [build-system]
