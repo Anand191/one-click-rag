@@ -151,6 +151,32 @@ resource "azurerm_cognitive_deployment" "deployment" {
   }
 }
 
+# AZURE FUNCTION APP
+# -----------------------------------------
+// APP SERVICE PLAN
+resource "azurerm_service_plan" "asplan" {
+  name                = "${random_pet.rg_name.id}-app-service-plan"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = var.default_location
+  os_type             = "Linux"
+  sku_name            = "Y1"
+}
+
+// FUNCTION APP
+resource "azurerm_linux_function_app" "doc_processor_fapp" {
+  name                = "doc-processor-func-app"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = var.default_location
+
+  storage_account_name          = azurerm_storage_account.default.name
+  storage_uses_managed_identity = true
+  service_plan_id               = azurerm_service_plan.asplan.id
+  identity {
+    type = "SystemAssigned"
+  }
+  site_config {}
+}
+
 # AI FOUNDRY RELATED
 # -----------------
 # // Azure AI Hub
@@ -235,7 +261,31 @@ resource "azurerm_role_assignment" "rbac_aisearch_openai" {
 }
 
 resource "azurerm_role_assignment" "rbac_aisearch_openai_2" {
-  role_definition_name = "Search Index Data Reader"
+  role_definition_name = "Search Index Data Contributor"
   scope                = azurerm_search_service.defaultsearch.id
   principal_id         = azurerm_cognitive_account.openai_resource.identity[0].principal_id
 }
+
+// MANAGED IDENTITY SCOPED TO BLOB CONTAINER ASSIGNED TO FUNCTION APP
+resource "azurerm_role_assignment" "rbac_blob_fapp" {
+  role_definition_name = "Storage Blob Data Contributor"
+  scope                = azurerm_storage_account.default.id
+  principal_id         = azurerm_linux_function_app.doc_processor_fapp.identity[0].principal_id
+}
+
+// MANAGED IDENTITY SCOPED TO OpenAI ASSIGNED TO FUNCTION APP
+resource "azurerm_role_assignment" "rbac_openai_fapp" {
+  role_definition_name = "Cognitive Services OpenAI Contributor"
+  scope                = azurerm_storage_account.default.id
+  principal_id         = azurerm_linux_function_app.doc_processor_fapp.identity[0].principal_id
+}
+
+// MANAGED IDENTITY SCOPED TO AI SEARCH INDEX TO FUNCTION APP
+resource "azurerm_role_assignment" "rbac_aisearch_fapp" {
+  role_definition_name = "Search Index Data Contributor"
+  scope                = azurerm_cognitive_account.openai_resource.id
+  principal_id         = azurerm_linux_function_app.doc_processor_fapp.identity[0].principal_id
+}
+
+
+
