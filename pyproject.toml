@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "ai_assistant"
-version = "0.0.2"
+version = "0.0.3"
 authors = [
     "Anand <anand1911991@outlook.com>",
 ]
 description = "Template repo for building GenAI applications"
 readme = "README.md"
-repository = "https://github.com/Anand191/terraform_tutorial.git"
+repository = "https://github.com/Anand191/one-click-rag.git"
 packages = [
     {include = "ai_assistant"}
 ]
@@ -14,78 +14,83 @@ exclude = ["tests*"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
+# Basic Libs
 pyyaml = "^6.0.2"
-pandas = "^2.2.2"
-pandera = "^0.20.4"
-numpy = "^1.26.4"
-loguru = "^0.7.2"
-pydantic = "^2.9.2"
-pydantic-settings = "^2.5.2"
-python-dotenv = "^1.0.1"
-functions-framework = "3.3.0"
-openpyxl = "^3.1.2" # used by the logging library
-tqdm = "^4.66.5"
+pandas = "^2.2.3"
+pandera = "^0.23.1"
+loguru = "^0.7.3"
+pydantic = "^2.11.2"
+pydantic-settings = "^2.8.1"
+python-dotenv = "^1.1.0"
+openpyxl = "^3.1.5" # used by the logging library
+tqdm = "^4.67.1"
+# DL Related
+torch = "^2.6.0"
 sentence-transformers = "^2.4.0"
-transformers = "^4.44.2"
-datasets = "^2.14.7"
-lightning = "^2.4.0"
-torchmetrics = "^1.4.1"
-redis = "^5.0.8"
-chromadb = "^0.5.5"
-openai = "^1.59.5"
-dspy-ai = "^2.5.43"
-langchain = "^0.3.14"
-langchain-core = "^0.3.29"
-langchain-openai = "^0.2.14"
-langchain-google-vertexai = "^2.0.7"
-langchain-community = "^0.3.14"
-fastapi = "^0.114.0"
-uvicorn = "^0.29.0"
-pypdf2 = "^3.0.1"
-geopy = "^2.4.1"
-typer = "^0.15.1"
-google-auth = "^2.37.0"
-google-cloud-discoveryengine = "^0.13.5"
-googleapis-common-protos = "^1.66.0"
-vertexai = "^1.71.1"
-azure-identity = "^1.19.0"
+transformers = "^4.51.2"
+accelerate = "^1.6.0"
+datasets = "^3.5.0"
+lightning = "^2.5.1"
+torchmetrics = "^1.7.1"
+# LLM Related
+chromadb = "^1.0.4"
+openai = "^1.73.0"
+dspy-ai = "^2.6.17"
+langchain = "^0.3.23"
+langchain-core = "^0.3.51"
+langchain-openai = "^0.3.12"
+langchain-google-vertexai = "^2.0.20"
+langchain-community = "^0.3.21"
+# API Related
+redis = "^5.2.1"
+fastapi = "^0.115.9"
+uvicorn = "^0.34.0"
+typer = "^0.12.5"
+# Azure related
+azure-identity = "^1.21.0"
 azure-keyvault = "^4.2.0"
 azure-search-documents = "^11.5.2"
-opentelemetry-exporter-otlp-proto-grpc = "1.25.0"
-google-api-python-client = "^2.157.0"
+azure-storage-blob = "^12.25.1"
+azure-functions = "^1.23.0"
+# GCP Related
+opentelemetry-exporter-otlp-proto-grpc = "1.32.0"
+google-auth = "^2.38.0"
+google-cloud-discoveryengine = "^0.13.8"
+googleapis-common-protos = "^1.69.2"
+google-api-python-client = "^2.166.0"
 google-auth-httplib2 = "^0.2.0"
 google-auth-oauthlib = "^1.2.1"
 google-cloud-storage = "^2.19.0"
+google-cloud-aiplatform = "^1.88.0"
+google-cloud-documentai = "^3.3.0"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.2"
+pytest = "^8.3.5"
 pytest-watch = "^4.2.0"
-pytest-cov = "^5.0.0"
+pytest-cov = "^6.1.1"
 pytest-xdist = "^3.6.1"
 pytest-mock = "^3.14.0"
 joblib = "^1.4.2"
-pylint = "^3.2.7"
-black = "^24.8.0"
-isort = "^5.13.2"
-flake8 = "^7.1.1"
-deptry = "^0.20.0"
 ruff = "^0.8.6"
+pylint = "^3.3.6"
+black = "^25.1.0"
+isort = "^6.0.1"
+flake8 = "^7.2.0"
+deptry = "^0.23.0"
 
 [tool.poetry.group.experimentation]
 optional = true
 
 [tool.poetry.group.experimentation.dependencies]
-jupyterlab = "^4.3.4"
-tabulate = "^0.9.0"
-ipywidgets = "^8.1.5"
-google-cloud-aiplatform = "^1.71.0"
-google-cloud-documentai = "^3.1.0"
-ragas = "^0.2.10"
-unstructured = {extras = ["md", "pdf"], version = "^0.16.12"}
-python-docx = "^1.1.2"
+jupyterlab = "^4.4.0"
+ipywidgets = "^8.1.6"
+ragas = "^0.2.14"
+pypdf2 = "^3.0.1"
+unstructured = {extras = ["md", "pdf"], version = "^0.17.2"}
+docling-core = "^2.26.1"
 
 
 [build-system]

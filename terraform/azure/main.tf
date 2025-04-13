@@ -76,6 +76,17 @@ resource "azurerm_storage_container" "defaultblob" {
   container_access_type = "private"
 }
 
+resource "azurerm_storage_container" "fapp_src_blob" {
+  name                  = "func-app-src-${random_string.suffix.result}"
+  storage_account_id    = azurerm_storage_account.default.id
+  container_access_type = "private"
+}
+resource "azurerm_storage_container" "fapp_dest_blob" {
+  name                  = "func-app-tgt-${random_string.suffix.result}"
+  storage_account_id    = azurerm_storage_account.default.id
+  container_access_type = "private"
+}
+
 // KEY VAULT
 resource "azurerm_key_vault" "defaultkeyvault" {
   name                     = "${var.prefix}keyvault${random_string.suffix.result}"

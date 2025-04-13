@@ -182,4 +182,5 @@ notebooks/
 data/
 downloads/
 secrets/
+ai_assistant/doc_parser/tmp
 
