@@ -6,30 +6,35 @@ output "resource_group_name" {
 
 output "virtual_network_name" {
   description = "The name of the created virtual network."
-  value       = azurerm_virtual_network.rg_vnet.name
+  value       = module.networking.vnet_name
 }
 
 output "subnet_1_name" {
   description = "The name of the created subnet 1."
-  value       = azurerm_subnet.data_subnet.name
+  value       = module.networking.data_subnet_name
 }
 
 output "subnet_2_name" {
   description = "The name of the created subnet 2."
-  value       = azurerm_subnet.ai_subnet.name
+  value       = module.networking.ai_subnet_name
 }
 
 output "storage_account_name" {
   description = "The name of the created storage account"
-  value       = azurerm_storage_account.default.name
+  value       = module.storage.storage_account_name
 }
 
 output "azurerm_search_service_name" {
   description = "The name of the created ai search resource"
-  value       = azurerm_search_service.defaultsearch.name
+  value       = module.ai_search.search_service_name
 }
 
 output "azurerm_openai_resource_name" {
   description = "The name of the created openai resource"
-  value       = azurerm_cognitive_account.openai_resource.name
+  value       = module.openai.openai_account_name
+}
+
+output "function_app_name" {
+  description = "The name of the created function app."
+  value       = module.function_app.function_app_name
 }

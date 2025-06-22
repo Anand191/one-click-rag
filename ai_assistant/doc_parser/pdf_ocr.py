@@ -51,7 +51,7 @@ class PdfParser(ABC):
         doctags = self.generate_output(inputs)
         # Populate document
         doctags_doc = DocTagsDocument.from_doctags_and_image_pairs([doctags], [image])
-        logger.debug(doctags)
+        # logger.debug(doctags)
         # create a docling document
         doc = DoclingDocument(name="Document")
         doc.load_from_doctags(doctags_doc)

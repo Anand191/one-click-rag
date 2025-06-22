@@ -8,295 +8,139 @@ resource "random_string" "suffix" {
   upper   = false
 }
 
-// RESOURCE GROUP
 resource "azurerm_resource_group" "rg" {
   location = var.default_location
   name     = random_pet.rg_name.id
+  tags     = var.tags
 }
 
 data "azurerm_client_config" "current" {}
 
-# VNETS & SUBNETS
-# ---------------
-// Virtual Network
-resource "azurerm_virtual_network" "rg_vnet" {
-  name                = "${random_pet.rg_name.id}-vnet"
-  address_space       = ["10.1.0.0/24"]
+module "networking" {
+  source = "./modules/networking"
+
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  vnet_name           = "${random_pet.rg_name.id}-vnet"
+  tags                = var.tags
+}
+
+module "storage" {
+  source = "./modules/storage"
+
+  prefix              = var.prefix
+  suffix              = random_string.suffix.result
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
+  subnet_id           = module.networking.data_subnet_id
+  ip_rules            = [var.local_ip, var.static_ip_1, var.static_ip_2, var.portal_ip]
+  tags                = var.tags
 }
 
-// SUBNET 1
-resource "azurerm_subnet" "data_subnet" {
-  name                 = "data"
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.rg_vnet.name
-  address_prefixes     = ["10.1.0.0/27"]
-  service_endpoints    = ["Microsoft.Storage", "Microsoft.CognitiveServices"]
+module "key_vault" {
+  source = "./modules/key_vault"
 
-  private_endpoint_network_policies = "Enabled"
+  prefix              = var.prefix
+  suffix              = random_string.suffix.result
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+  tags                = var.tags
 }
 
-// SUBNET 2
-resource "azurerm_subnet" "ai_subnet" {
-  name                 = "ai"
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.rg_vnet.name
-  address_prefixes     = ["10.1.0.32/27"]
-  service_endpoints    = ["Microsoft.Storage", "Microsoft.CognitiveServices"]
+module "ai_search" {
+  source = "./modules/ai_search"
 
-  private_endpoint_network_policies = "Enabled"
+  search_service_name = "${random_pet.rg_name.id}-aisearch"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  sku                 = var.sku
+  replica_count       = var.replica_count
+  partition_count     = var.partition_count
+  tags                = var.tags
 }
 
-# STORAGE ACCOUNT & BLOB CONTAINER
-# ---------------------------------
-// STORAGE ACCOUNT
-resource "azurerm_storage_account" "default" {
-  name                            = "${var.prefix}storage${random_string.suffix.result}"
-  location                        = azurerm_resource_group.rg.location
-  resource_group_name             = azurerm_resource_group.rg.name
-  account_tier                    = "Standard"
-  account_replication_type        = "GRS"
-  allow_nested_items_to_be_public = false
+module "openai" {
+  source = "./modules/openai"
+
+  openai_deployment_name = var.openai_deployment
+  location               = var.cognitive_services_location
+  resource_group_name    = azurerm_resource_group.rg.name
+  tags                   = var.tags
+  ip_rules               = [var.local_ip, var.static_ip_1, var.static_ip_2, var.portal_ip]
+  openai_deployments     = var.openai_deployments
 }
 
-// NETWORK RULES FOR THE STORAGE CONTAINER
-resource "azurerm_storage_account_network_rules" "storage_network_rules" {
-  storage_account_id         = azurerm_storage_account.default.id
-  default_action             = "Deny"
-  ip_rules                   = [var.local_ip, var.static_ip_1, var.static_ip_2, var.portal_ip]
-  virtual_network_subnet_ids = [azurerm_subnet.data_subnet.id]
-  bypass                     = ["AzureServices"]
-}
+module "function_app" {
+  source = "./modules/function_app"
 
-// BLOB CONTAINER WIHIN STORAGE ACCOUNT
-resource "azurerm_storage_container" "defaultblob" {
-  name                  = "${var.prefix}blob${random_string.suffix.result}"
-  storage_account_id    = azurerm_storage_account.default.id
-  container_access_type = "private"
-}
-
-resource "azurerm_storage_container" "fapp_src_blob" {
-  name                  = "func-app-src-${random_string.suffix.result}"
-  storage_account_id    = azurerm_storage_account.default.id
-  container_access_type = "private"
-}
-resource "azurerm_storage_container" "fapp_dest_blob" {
-  name                  = "func-app-tgt-${random_string.suffix.result}"
-  storage_account_id    = azurerm_storage_account.default.id
-  container_access_type = "private"
-}
-
-// KEY VAULT
-resource "azurerm_key_vault" "defaultkeyvault" {
-  name                     = "${var.prefix}keyvault${random_string.suffix.result}"
-  location                 = azurerm_resource_group.rg.location
-  resource_group_name      = azurerm_resource_group.rg.name
-  tenant_id                = data.azurerm_client_config.current.tenant_id
-  sku_name                 = "standard"
-  purge_protection_enabled = false
-}
-
-// AZURE AI SEARCH RESOURCE
-resource "azurerm_search_service" "defaultsearch" {
-  name                         = "${random_pet.rg_name.id}-aisearch"
-  resource_group_name          = azurerm_resource_group.rg.name
-  location                     = azurerm_resource_group.rg.location
-  sku                          = var.sku
-  replica_count                = var.replica_count
-  partition_count              = var.partition_count
-  local_authentication_enabled = true
-  authentication_failure_mode  = "http403"
-
-  public_network_access_enabled = true
-  allowed_ips                   = [var.local_ip, var.static_ip_1, var.static_ip_2, var.portal_ip]
-  network_rule_bypass_option    = "AzureServices"
-  identity {
-    type = "SystemAssigned"
-  }
-}
-
-# AZURE OPENAI RESOURCE & MODEL DEPLOYMENTS
-# -----------------------------------------
-// AZURE OPENAI RESOURCE
-resource "azurerm_cognitive_account" "openai_resource" {
-  name                  = var.openai_deployment
-  location              = var.cognitive_services_location
+  app_service_plan_name = "${random_pet.rg_name.id}-app-service-plan"
+  function_app_name     = "doc-processor-func-app-${random_string.suffix.result}"
   resource_group_name   = azurerm_resource_group.rg.name
-  kind                  = "OpenAI"
-  sku_name              = "S0"
+  location              = var.default_location
+  storage_account_name  = module.storage.storage_account_name
   tags                  = var.tags
-  custom_subdomain_name = "oai-common-rag"
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      tags
-    ]
-  }
-
-  network_acls {
-    bypass         = "AzureServices"
-    default_action = "Deny"
-    ip_rules       = [var.local_ip, var.static_ip_1, var.static_ip_2, var.portal_ip]
-  }
 }
-
-// OPENAI MODEL DEPLOYMENTS
-resource "azurerm_cognitive_deployment" "deployment" {
-  for_each             = { for deployment in var.openai_deployments : deployment.name => deployment }
-  name                 = each.key
-  cognitive_account_id = azurerm_cognitive_account.openai_resource.id
-  model {
-    format  = "OpenAI"
-    name    = each.value.model.name
-    version = each.value.model.version
-  }
-
-  sku {
-    name     = each.value.sku_name
-    capacity = each.value.capacity
-  }
-}
-
-# AZURE FUNCTION APP
-# -----------------------------------------
-// APP SERVICE PLAN
-resource "azurerm_service_plan" "asplan" {
-  name                = "${random_pet.rg_name.id}-app-service-plan"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = var.default_location
-  os_type             = "Linux"
-  sku_name            = "Y1"
-}
-
-// FUNCTION APP
-resource "azurerm_linux_function_app" "doc_processor_fapp" {
-  name                = "doc-processor-func-app"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = var.default_location
-
-  storage_account_name          = azurerm_storage_account.default.name
-  storage_uses_managed_identity = true
-  service_plan_id               = azurerm_service_plan.asplan.id
-  identity {
-    type = "SystemAssigned"
-  }
-  site_config {}
-}
-
-# AI FOUNDRY RELATED
-# -----------------
-# // Azure AI Hub
-# resource "azapi_resource" "defaulthub" {
-#   type      = "Microsoft.MachineLearningServices/workspaces@2024-04-01-preview"
-#   name      = "${random_pet.rg_name.id}-aih"
-#   location  = var.cognitive_services_location
-#   parent_id = azurerm_resource_group.rg.id
-
-#   identity {
-#     type = "SystemAssigned"
-#   }
-
-#   body = {
-#     properties = {
-#       description    = "Sample Azure AI hub"
-#       friendlyName   = "Sample AI Hub"
-#       storageAccount = azurerm_storage_account.default.id
-#       keyVault       = azurerm_key_vault.defaultkeyvault.id
-
-#     }
-#     kind = "hub"
-#   }
-# }
-
-# // Azure AI Project
-# resource "azapi_resource" "defaultproject" {
-#   type      = "Microsoft.MachineLearningServices/workspaces@2024-04-01-preview"
-#   name      = "ai-project${random_string.suffix.result}"
-#   location  = var.cognitive_services_location
-#   parent_id = azurerm_resource_group.rg.id
-
-#   identity {
-#     type = "SystemAssigned"
-#   }
-
-#   body = {
-#     properties = {
-#       description   = "Sample Azure AI PROJECT"
-#       friendlyName  = "Sample AI project"
-#       hubResourceId = azapi_resource.defaulthub.id
-#     }
-#     kind = "project"
-#   }
-# }
-
-# // MANAGED IDENTITY SCOPED TO OPENAI ASSIGNED TO AI FOUNDRY
-# resource "azurerm_role_assignment" "rbac_openai_aifoundry_hub" {
-#   role_definition_name = "Cognitive Services User"
-#   scope                = azurerm_cognitive_account.openai_resource.id
-#   principal_id         = azapi_resource.defaulthub.identity[0].principal_id
-# }
 
 # ALL RBACs
 # --------
 // MANAGED IDENTITY SCOPED TO BLOB CONTAINER ASSIGNED TO AI SEARCH
 resource "azurerm_role_assignment" "rbac_blob_aisearch" {
   role_definition_name = "Storage Blob Data Contributor"
-  scope                = azurerm_storage_account.default.id
-  principal_id         = azurerm_search_service.defaultsearch.identity[0].principal_id
+  scope                = module.storage.storage_account_id
+  principal_id         = module.ai_search.search_service_identity_principal_id
 }
 
 // MANAGED IDENTITY SCOPED TO BLOB CONTAINER ASSIGNED TO OPENAI
 resource "azurerm_role_assignment" "rbac_blob_openai" {
   role_definition_name = "Storage Blob Data Contributor"
-  scope                = azurerm_storage_account.default.id
-  principal_id         = azurerm_cognitive_account.openai_resource.identity[0].principal_id
+  scope                = module.storage.storage_account_id
+  principal_id         = module.openai.openai_identity_principal_id
 }
 
 // MANAGED IDENTITY SCOPED TO OPENAI ASSIGNED TO AI SEARCH
 resource "azurerm_role_assignment" "rbac_openai_aisearch" {
   role_definition_name = "Cognitive Services OpenAI Contributor"
-  scope                = azurerm_cognitive_account.openai_resource.id
-  principal_id         = azurerm_search_service.defaultsearch.identity[0].principal_id
+  scope                = module.openai.openai_account_id
+  principal_id         = module.ai_search.search_service_identity_principal_id
 }
 
 // MANAGED IDENTITY SCOPED TO AI SEARCH ASSIGNED TO OPENAI
 resource "azurerm_role_assignment" "rbac_aisearch_openai" {
   role_definition_name = "Search Service Contributor"
-  scope                = azurerm_search_service.defaultsearch.id
-  principal_id         = azurerm_cognitive_account.openai_resource.identity[0].principal_id
+  scope                = module.ai_search.search_service_id
+  principal_id         = module.openai.openai_identity_principal_id
 }
 
 resource "azurerm_role_assignment" "rbac_aisearch_openai_2" {
   role_definition_name = "Search Index Data Contributor"
-  scope                = azurerm_search_service.defaultsearch.id
-  principal_id         = azurerm_cognitive_account.openai_resource.identity[0].principal_id
+  scope                = module.ai_search.search_service_id
+  principal_id         = module.openai.openai_identity_principal_id
+}
+
+resource "azurerm_role_assignment" "rbac_aisearch_openai_3" {
+  role_definition_name = "Search Index Data Reader"
+  scope                = module.ai_search.search_service_id
+  principal_id         = module.openai.openai_identity_principal_id
 }
 
 // MANAGED IDENTITY SCOPED TO BLOB CONTAINER ASSIGNED TO FUNCTION APP
 resource "azurerm_role_assignment" "rbac_blob_fapp" {
   role_definition_name = "Storage Blob Data Contributor"
-  scope                = azurerm_storage_account.default.id
-  principal_id         = azurerm_linux_function_app.doc_processor_fapp.identity[0].principal_id
+  scope                = module.storage.storage_account_id
+  principal_id         = module.function_app.function_app_identity_principal_id
 }
 
 // MANAGED IDENTITY SCOPED TO OpenAI ASSIGNED TO FUNCTION APP
 resource "azurerm_role_assignment" "rbac_openai_fapp" {
   role_definition_name = "Cognitive Services OpenAI Contributor"
-  scope                = azurerm_storage_account.default.id
-  principal_id         = azurerm_linux_function_app.doc_processor_fapp.identity[0].principal_id
+  scope                = module.openai.openai_account_id
+  principal_id         = module.function_app.function_app_identity_principal_id
 }
 
 // MANAGED IDENTITY SCOPED TO AI SEARCH INDEX TO FUNCTION APP
 resource "azurerm_role_assignment" "rbac_aisearch_fapp" {
   role_definition_name = "Search Index Data Contributor"
-  scope                = azurerm_cognitive_account.openai_resource.id
-  principal_id         = azurerm_linux_function_app.doc_processor_fapp.identity[0].principal_id
+  scope                = module.ai_search.search_service_id
+  principal_id         = module.function_app.function_app_identity_principal_id
 }
-
-
-
