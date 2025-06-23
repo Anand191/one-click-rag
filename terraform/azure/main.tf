@@ -16,6 +16,14 @@ resource "azurerm_resource_group" "rg" {
 
 data "azurerm_client_config" "current" {}
 
+module "insights" {
+  source = "./modules/insights"
+
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  tags                = var.tags
+}
+
 module "networking" {
   source = "./modules/networking"
 
@@ -82,8 +90,21 @@ module "function_app" {
   tags                  = var.tags
 }
 
+module "ai_foundry" {
+  source = "./modules/ai_foundry"
+
+  location            = var.cognitive_services_location
+  resource_group_name = azurerm_resource_group.rg.name
+  storage_account_id  = module.storage.storage_account_id
+  key_vault_id        = module.key_vault.key_vault_id
+  application_insights_id = module.insights.app_id
+  tags                = var.tags
+}
+
 # ALL RBACs
 # --------
+
+# ALL Assignment scoped to Blob Container
 // MANAGED IDENTITY SCOPED TO BLOB CONTAINER ASSIGNED TO AI SEARCH
 resource "azurerm_role_assignment" "rbac_blob_aisearch" {
   role_definition_name = "Storage Blob Data Contributor"
@@ -98,13 +119,14 @@ resource "azurerm_role_assignment" "rbac_blob_openai" {
   principal_id         = module.openai.openai_identity_principal_id
 }
 
-// MANAGED IDENTITY SCOPED TO OPENAI ASSIGNED TO AI SEARCH
-resource "azurerm_role_assignment" "rbac_openai_aisearch" {
-  role_definition_name = "Cognitive Services OpenAI Contributor"
-  scope                = module.openai.openai_account_id
-  principal_id         = module.ai_search.search_service_identity_principal_id
+// MANAGED IDENTITY SCOPED TO BLOB CONTAINER ASSIGNED TO FUNCTION APP
+resource "azurerm_role_assignment" "rbac_blob_fapp" {
+  role_definition_name = "Storage Blob Data Contributor"
+  scope                = module.storage.storage_account_id
+  principal_id         = module.function_app.function_app_identity_principal_id
 }
 
+# All Assignments Scoped to AI Search
 // MANAGED IDENTITY SCOPED TO AI SEARCH ASSIGNED TO OPENAI
 resource "azurerm_role_assignment" "rbac_aisearch_openai" {
   role_definition_name = "Search Service Contributor"
@@ -124,11 +146,19 @@ resource "azurerm_role_assignment" "rbac_aisearch_openai_3" {
   principal_id         = module.openai.openai_identity_principal_id
 }
 
-// MANAGED IDENTITY SCOPED TO BLOB CONTAINER ASSIGNED TO FUNCTION APP
-resource "azurerm_role_assignment" "rbac_blob_fapp" {
-  role_definition_name = "Storage Blob Data Contributor"
-  scope                = module.storage.storage_account_id
+// MANAGED IDENTITY SCOPED TO AI SEARCH INDEX TO FUNCTION APP
+resource "azurerm_role_assignment" "rbac_aisearch_fapp" {
+  role_definition_name = "Search Index Data Contributor"
+  scope                = module.ai_search.search_service_id
   principal_id         = module.function_app.function_app_identity_principal_id
+}
+
+# All Assignments Scoped to OpenAI
+// MANAGED IDENTITY SCOPED TO OPENAI ASSIGNED TO AI SEARCH
+resource "azurerm_role_assignment" "rbac_openai_aisearch" {
+  role_definition_name = "Cognitive Services OpenAI Contributor"
+  scope                = module.openai.openai_account_id
+  principal_id         = module.ai_search.search_service_identity_principal_id
 }
 
 // MANAGED IDENTITY SCOPED TO OpenAI ASSIGNED TO FUNCTION APP
@@ -138,9 +168,9 @@ resource "azurerm_role_assignment" "rbac_openai_fapp" {
   principal_id         = module.function_app.function_app_identity_principal_id
 }
 
-// MANAGED IDENTITY SCOPED TO AI SEARCH INDEX TO FUNCTION APP
-resource "azurerm_role_assignment" "rbac_aisearch_fapp" {
-  role_definition_name = "Search Index Data Contributor"
-  scope                = module.ai_search.search_service_id
-  principal_id         = module.function_app.function_app_identity_principal_id
+// MANAGED IDENTITY SCOPED TO OpenAI ASSIGNED TO AI Foundry
+resource "azurerm_role_assignment" "rbac_openai_aifoundry" {
+  role_definition_name = "Cognitive Services OpenAI Contributor"
+  scope                = module.openai.openai_account_id
+  principal_id         = module.ai_foundry.hub_identity_principal_id
 }
