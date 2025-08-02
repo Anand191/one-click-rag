@@ -1,3 +1,11 @@
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "rg-super-pipefish"
+    storage_account_name = "aistorage7xbl"
+    container_name       = "aiblob7xbl"
+    key                  = "shared_tf_state/terraform.tfstate"
+  }
+}
 resource "random_pet" "rg_name" {
   prefix = var.resource_group_name_prefix
 }
@@ -93,12 +101,12 @@ module "function_app" {
 module "ai_foundry" {
   source = "./modules/ai_foundry"
 
-  location            = var.cognitive_services_location
-  resource_group_name = azurerm_resource_group.rg.name
-  storage_account_id  = module.storage.storage_account_id
-  key_vault_id        = module.key_vault.key_vault_id
+  location                = var.cognitive_services_location
+  resource_group_name     = azurerm_resource_group.rg.name
+  storage_account_id      = module.storage.storage_account_id
+  key_vault_id            = module.key_vault.key_vault_id
   application_insights_id = module.insights.app_id
-  tags                = var.tags
+  tags                    = var.tags
 }
 
 # ALL RBACs
